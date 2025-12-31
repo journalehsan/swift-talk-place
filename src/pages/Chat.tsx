@@ -6,9 +6,20 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { mockConversations, mockUsers } from '@/data/mockData';
-import { Search, Send, Phone, Video, MoreVertical, Plus, Smile, Paperclip } from 'lucide-react';
+import { Search, Send, Phone, Video, MoreVertical, Plus, Smile, Paperclip, FileText, Image } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function Chat() {
   const { user } = useAuth();
@@ -17,6 +28,28 @@ export default function Chat() {
   const [messages, setMessages] = useState(selectedConversation.messages);
   const [searchQuery, setSearchQuery] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+
+  const emojis = [
+    '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
+    '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
+    '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜',
+    '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐',
+    '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '😮‍💨',
+    '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒',
+    '👍', '👎', '👋', '🙌', '👏', '🤝', '❤️', '🔥',
+    '✨', '🎉', '💯', '✅', '⭐', '💪', '🙏', '💬',
+  ];
+
+  const handleEmojiClick = (emoji: string) => {
+    setMessage(prev => prev + emoji);
+    setEmojiOpen(false);
+  };
+
+  const handleAttachment = (type: 'file' | 'photo') => {
+    // This will be wired to actual file upload later
+    console.log(`Attaching ${type}`);
+  };
 
   const handleSendMessage = () => {
     if (message.trim()) {
@@ -203,9 +236,23 @@ export default function Chat() {
           {/* Message Input */}
           <div className="p-4 border-t border-border">
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon">
-                <Paperclip className="h-4 w-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem onClick={() => handleAttachment('file')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Files / Documents
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAttachment('photo')}>
+                    <Image className="h-4 w-4 mr-2" />
+                    Photo
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Input
                 placeholder="Type a message..."
                 value={message}
@@ -213,9 +260,26 @@ export default function Chat() {
                 onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                 className="flex-1"
               />
-              <Button variant="ghost" size="icon">
-                <Smile className="h-4 w-4" />
-              </Button>
+              <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Smile className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 p-2">
+                  <div className="grid grid-cols-8 gap-1">
+                    {emojis.map((emoji) => (
+                      <button
+                        key={emoji}
+                        onClick={() => handleEmojiClick(emoji)}
+                        className="p-1.5 hover:bg-muted rounded text-lg transition-colors"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Button size="icon" onClick={handleSendMessage} disabled={!message.trim()}>
                 <Send className="h-4 w-4" />
               </Button>
