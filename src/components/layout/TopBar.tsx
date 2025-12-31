@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
 import { MeetingIcon } from '@/components/icons/MeetingIcon';
 import { NewMeetingModal } from '@/components/modals/NewMeetingModal';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Plus } from 'lucide-react';
 
 export function TopBar() {
   const { theme, toggleTheme } = useTheme();
@@ -11,15 +11,18 @@ export function TopBar() {
 
   return (
     <>
-      <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6">
-        <div className="flex-1" />
+      <header className="h-14 bg-primary flex items-center justify-between px-6">
+        <div className="flex items-center gap-3">
+          <MeetingIcon className="h-8 w-8 text-primary-foreground" />
+        </div>
         
         <div className="flex items-center gap-3">
           <Button
             onClick={() => setMeetingModalOpen(true)}
-            className="bg-[#ffcc00] hover:bg-[#e6b800] text-black font-medium gap-2"
+            variant="ghost"
+            className="text-primary-foreground hover:bg-primary-foreground/10 font-medium gap-2"
           >
-            <MeetingIcon className="h-5 w-5" />
+            <Plus className="h-5 w-5" />
             New Meeting
           </Button>
 
@@ -27,7 +30,7 @@ export function TopBar() {
             variant="ghost"
             size="icon"
             onClick={toggleTheme}
-            className="rounded-full"
+            className="rounded-full text-primary-foreground hover:bg-primary-foreground/10"
           >
             {theme === 'light' ? (
               <Moon className="h-5 w-5" />

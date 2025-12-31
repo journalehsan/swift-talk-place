@@ -15,8 +15,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 48 100% 50%;
+    --primary-foreground: 0 0% 0%;
 
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
@@ -32,7 +32,7 @@
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --ring: 48 100% 50%;
 
     --radius: 0.5rem;
 
@@ -49,12 +49,12 @@
 
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 221 83% 53%;
-    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-primary: 48 100% 50%;
+    --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 222 40% 18%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 222 40% 18%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-ring: 48 100% 50%;
 
     --meeting-bg: 222 47% 8%;
     --meeting-controls: 222 40% 15%;
@@ -70,8 +70,8 @@
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 48 100% 50%;
+    --primary-foreground: 0 0% 0%;
 
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
