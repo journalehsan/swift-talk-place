@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/UserAvatar';
+import { NewMeetingModal } from '@/components/modals/NewMeetingModal';
 import { mockMeetings } from '@/data/mockData';
 import { Video, Plus, Search, Calendar, Clock, Users, Copy, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
@@ -12,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function Meetings() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [meetingModalOpen, setMeetingModalOpen] = useState(false);
   const { toast } = useToast();
 
   const copyMeetingLink = (meetingId: string) => {
@@ -38,7 +40,7 @@ export default function Meetings() {
                 Join with Code
               </Link>
             </Button>
-            <Button>
+            <Button onClick={() => setMeetingModalOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               New Meeting
             </Button>
@@ -47,7 +49,10 @@ export default function Meetings() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50">
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50"
+            onClick={() => setMeetingModalOpen(true)}
+          >
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 rounded-xl bg-primary/10 text-primary">
                 <Video className="h-6 w-6" />
@@ -59,7 +64,10 @@ export default function Meetings() {
             </CardContent>
           </Card>
           
-          <Card className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50">
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50"
+            onClick={() => setMeetingModalOpen(true)}
+          >
             <CardContent className="p-6 flex items-center gap-4">
               <div className="p-3 rounded-xl bg-accent/10 text-accent">
                 <Calendar className="h-6 w-6" />
@@ -156,6 +164,8 @@ export default function Meetings() {
           </CardContent>
         </Card>
       </div>
+
+      <NewMeetingModal open={meetingModalOpen} onOpenChange={setMeetingModalOpen} />
     </AppLayout>
   );
 }
