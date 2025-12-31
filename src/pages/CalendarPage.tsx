@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { NewMeetingModal } from '@/components/modals/NewMeetingModal';
 import { mockMeetings, mockCalendarEvents } from '@/data/mockData';
 import { ChevronLeft, ChevronRight, Plus, Video, Clock } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns';
@@ -13,6 +14,7 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [meetingModalOpen, setMeetingModalOpen] = useState(false);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -50,7 +52,7 @@ export default function CalendarPage() {
             <h1 className="text-3xl font-bold">Calendar</h1>
             <p className="text-muted-foreground mt-1">Manage your schedule and meetings</p>
           </div>
-          <Button>
+          <Button onClick={() => setMeetingModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             New Event
           </Button>
@@ -171,7 +173,12 @@ export default function CalendarPage() {
                     <Video className="h-6 w-6 text-muted-foreground" />
                   </div>
                   <p className="text-muted-foreground">No meetings scheduled</p>
-                  <Button variant="outline" size="sm" className="mt-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-4"
+                    onClick={() => setMeetingModalOpen(true)}
+                  >
                     <Plus className="mr-2 h-3 w-3" />
                     Add Event
                   </Button>
@@ -206,6 +213,12 @@ export default function CalendarPage() {
           </Card>
         </div>
       </div>
+
+      <NewMeetingModal 
+        open={meetingModalOpen} 
+        onOpenChange={setMeetingModalOpen} 
+        selectedDate={selectedDate}
+      />
     </AppLayout>
   );
 }

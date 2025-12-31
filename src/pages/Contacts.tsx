@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/UserAvatar';
+import { NewContactModal } from '@/components/modals/NewContactModal';
 import { mockUsers } from '@/data/mockData';
 import { Search, UserPlus, MessageSquare, Video, Phone, MoreVertical, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -11,6 +12,7 @@ import { cn } from '@/lib/utils';
 export default function Contacts() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
 
   const filteredUsers = mockUsers.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -47,7 +49,7 @@ export default function Contacts() {
               {mockUsers.length} contacts • {mockUsers.filter(u => u.status === 'online').length} online
             </p>
           </div>
-          <Button>
+          <Button onClick={() => setContactModalOpen(true)}>
             <UserPlus className="mr-2 h-4 w-4" />
             Add Contact
           </Button>
@@ -139,6 +141,8 @@ export default function Contacts() {
             ))}
         </div>
       </div>
+
+      <NewContactModal open={contactModalOpen} onOpenChange={setContactModalOpen} />
     </AppLayout>
   );
 }
