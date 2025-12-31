@@ -58,6 +58,8 @@
 
     --meeting-bg: 222 47% 8%;
     --meeting-controls: 222 40% 15%;
+    --meeting-foreground: 210 40% 98%;
+    --meeting-foreground-muted: 215 20% 70%;
   }
 
   .dark {
