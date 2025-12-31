@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/UserAvatar';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { mockMeetings, mockConversations, mockUsers } from '@/data/mockData';
 import { Video, MessageSquare, Calendar, Users, Clock, Plus, ArrowRight } from 'lucide-react';
@@ -15,7 +16,8 @@ export default function Dashboard() {
   const onlineContacts = mockUsers.filter(u => u.status === 'online' && u.id !== user?.id);
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <AppLayout>
+      <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -192,6 +194,7 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
