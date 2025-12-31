@@ -75,6 +75,8 @@ export default {
         meeting: {
           bg: "hsl(var(--meeting-bg))",
           controls: "hsl(var(--meeting-controls))",
+          foreground: "hsl(var(--meeting-foreground))",
+          "foreground-muted": "hsl(var(--meeting-foreground-muted))",
         },
       },
       borderRadius: {

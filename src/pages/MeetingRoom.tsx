@@ -59,21 +59,21 @@ export default function MeetingRoom() {
       {/* Main Video Area */}
       <div className="flex-1 flex flex-col">
         {/* Top Bar */}
-        <div className="h-14 px-4 flex items-center justify-between meeting-glass border-b border-white/5">
+        <div className="h-14 px-4 flex items-center justify-between meeting-glass border-b border-border/20">
           <div className="flex items-center gap-3">
-            <span className="text-primary-foreground font-medium">Daily Standup</span>
-            <span className="text-primary-foreground/60 text-sm">|</span>
-            <span className="text-primary-foreground/60 text-sm">10:30 - 11:00 AM</span>
+            <span className="text-meeting-foreground font-medium">Daily Standup</span>
+            <span className="text-meeting-foreground-muted text-sm">|</span>
+            <span className="text-meeting-foreground-muted text-sm">10:30 - 11:00 AM</span>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="meeting" size="icon-sm">
-              <Grid3X3 size={18} />
+              <Grid3X3 size={18} className="text-meeting-foreground" />
             </Button>
             <Button variant="meeting" size="icon-sm">
-              <Maximize2 size={18} />
+              <Maximize2 size={18} className="text-meeting-foreground" />
             </Button>
             <Button variant="meeting" size="icon-sm">
-              <Settings size={18} />
+              <Settings size={18} className="text-meeting-foreground" />
             </Button>
           </div>
         </div>
@@ -96,11 +96,11 @@ export default function MeetingRoom() {
               {/* Participant info */}
               <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
                 <div className="flex items-center justify-between">
-                  <span className="text-primary-foreground text-sm font-medium">
+                  <span className="text-meeting-foreground text-sm font-medium">
                     {participant.name}
                     {participant.id === user?.id && ' (You)'}
                   </span>
-                  {index === 1 && <MicOff size={14} className="text-destructive" />}
+                  {index === 1 && <MicOff size={14} className="text-red-400" />}
                 </div>
               </div>
             </div>
@@ -108,14 +108,14 @@ export default function MeetingRoom() {
         </div>
 
         {/* Controls Bar */}
-        <div className="h-20 px-4 flex items-center justify-center gap-3 meeting-glass border-t border-white/5">
+        <div className="h-20 px-4 flex items-center justify-center gap-3 meeting-glass border-t border-border/20">
           <Button
             variant={isMuted ? 'meeting-danger' : 'meeting'}
             size="icon-lg"
             onClick={() => setIsMuted(!isMuted)}
             className="rounded-full"
           >
-            {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
+            {isMuted ? <MicOff size={22} className="text-meeting-foreground" /> : <Mic size={22} className="text-meeting-foreground" />}
           </Button>
           
           <Button
@@ -124,7 +124,7 @@ export default function MeetingRoom() {
             onClick={() => setIsVideoOn(!isVideoOn)}
             className="rounded-full"
           >
-            {isVideoOn ? <Video size={22} /> : <VideoOff size={22} />}
+            {isVideoOn ? <Video size={22} className="text-meeting-foreground" /> : <VideoOff size={22} className="text-meeting-foreground" />}
           </Button>
           
           <Button
@@ -133,14 +133,14 @@ export default function MeetingRoom() {
             onClick={() => setIsScreenSharing(!isScreenSharing)}
             className="rounded-full"
           >
-            <Monitor size={22} />
+            <Monitor size={22} className="text-meeting-foreground" />
           </Button>
           
           <Button variant="meeting" size="icon-lg" className="rounded-full">
-            <Hand size={22} />
+            <Hand size={22} className="text-meeting-foreground" />
           </Button>
           
-          <div className="w-px h-8 bg-white/10 mx-2" />
+          <div className="w-px h-8 bg-border/30 mx-2" />
           
           <Button
             variant={isChatOpen ? 'meeting-active' : 'meeting'}
@@ -148,7 +148,7 @@ export default function MeetingRoom() {
             onClick={() => { setIsChatOpen(!isChatOpen); setIsParticipantsOpen(false); }}
             className="rounded-full"
           >
-            <MessageSquare size={22} />
+            <MessageSquare size={22} className="text-meeting-foreground" />
           </Button>
           
           <Button
@@ -157,14 +157,14 @@ export default function MeetingRoom() {
             onClick={() => { setIsParticipantsOpen(!isParticipantsOpen); setIsChatOpen(false); }}
             className="rounded-full"
           >
-            <Users size={22} />
+            <Users size={22} className="text-meeting-foreground" />
           </Button>
           
           <Button variant="meeting" size="icon-lg" className="rounded-full">
-            <MoreVertical size={22} />
+            <MoreVertical size={22} className="text-meeting-foreground" />
           </Button>
           
-          <div className="w-px h-8 bg-white/10 mx-2" />
+          <div className="w-px h-8 bg-border/30 mx-2" />
           
           <Button
             variant="meeting-danger"
@@ -180,9 +180,9 @@ export default function MeetingRoom() {
 
       {/* Side Panel - Chat or Participants */}
       {(isChatOpen || isParticipantsOpen) && (
-        <div className="w-80 meeting-glass border-l border-white/5 flex flex-col animate-slide-up">
-          <div className="h-14 px-4 flex items-center border-b border-white/5">
-            <h3 className="text-primary-foreground font-medium">
+        <div className="w-80 meeting-glass border-l border-border/20 flex flex-col animate-slide-up">
+          <div className="h-14 px-4 flex items-center border-b border-border/20">
+            <h3 className="text-meeting-foreground font-medium">
               {isChatOpen ? 'In-call messages' : 'Participants'}
             </h3>
           </div>
@@ -194,25 +194,25 @@ export default function MeetingRoom() {
                   {chatMessages.map((msg) => (
                     <div key={msg.id} className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-primary-foreground text-sm font-medium">{msg.sender}</span>
-                        <span className="text-primary-foreground/40 text-xs">{msg.time}</span>
+                        <span className="text-meeting-foreground text-sm font-medium">{msg.sender}</span>
+                        <span className="text-meeting-foreground-muted text-xs">{msg.time}</span>
                       </div>
-                      <p className="text-primary-foreground/80 text-sm">{msg.content}</p>
+                      <p className="text-meeting-foreground/80 text-sm">{msg.content}</p>
                     </div>
                   ))}
                 </div>
               </ScrollArea>
-              <div className="p-4 border-t border-white/5">
+              <div className="p-4 border-t border-border/20">
                 <div className="flex gap-2">
                   <Input
                     placeholder="Send a message..."
                     value={chatMessage}
                     onChange={(e) => setChatMessage(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    className="bg-meeting-controls border-white/10 text-primary-foreground placeholder:text-primary-foreground/40"
+                    className="bg-meeting-controls border-border/30 text-meeting-foreground placeholder:text-meeting-foreground-muted"
                   />
                   <Button variant="meeting" size="icon" onClick={handleSendMessage}>
-                    <Send size={18} />
+                    <Send size={18} className="text-meeting-foreground" />
                   </Button>
                 </div>
               </div>
@@ -221,14 +221,14 @@ export default function MeetingRoom() {
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-3">
                 {participants.map((participant) => (
-                  <div key={participant.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5">
+                  <div key={participant.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/10">
                     <UserAvatar user={participant} size="sm" />
                     <div className="flex-1">
-                      <p className="text-primary-foreground text-sm font-medium">
+                      <p className="text-meeting-foreground text-sm font-medium">
                         {participant.name}
                         {participant.id === user?.id && ' (You)'}
                       </p>
-                      <p className="text-primary-foreground/60 text-xs">{participant.department}</p>
+                      <p className="text-meeting-foreground-muted text-xs">{participant.department}</p>
                     </div>
                   </div>
                 ))}
