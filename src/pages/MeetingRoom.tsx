@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -19,16 +19,18 @@ import {
   Maximize2,
   Settings,
   Send,
+  MonitorOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
 
 export default function MeetingRoom() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOn, setIsVideoOn] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isVideoOn, setIsVideoOn] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
@@ -38,7 +40,141 @@ export default function MeetingRoom() {
     { id: '2', sender: 'Michael Chen', content: 'Ready to start?', time: '10:31 AM' },
   ]);
 
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const screenShareRef = useRef<HTMLVideoElement>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+
   const participants = mockUsers.slice(0, 4);
+
+  // Cleanup streams on unmount
+  useEffect(() => {
+    return () => {
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  // Toggle microphone
+  const handleToggleMute = useCallback(async () => {
+    try {
+      if (isMuted) {
+        // Request microphone permission
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (localStreamRef.current) {
+          // Add audio track to existing stream
+          stream.getAudioTracks().forEach(track => {
+            localStreamRef.current?.addTrack(track);
+          });
+        } else {
+          localStreamRef.current = stream;
+        }
+        toast.success('Microphone enabled');
+      } else {
+        // Mute audio tracks
+        localStreamRef.current?.getAudioTracks().forEach(track => {
+          track.stop();
+          localStreamRef.current?.removeTrack(track);
+        });
+        toast.info('Microphone disabled');
+      }
+      setIsMuted(!isMuted);
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      toast.error('Could not access microphone. Please check permissions.');
+    }
+  }, [isMuted]);
+
+  // Toggle camera
+  const handleToggleVideo = useCallback(async () => {
+    try {
+      if (!isVideoOn) {
+        // Request camera permission
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { width: 1280, height: 720 } 
+        });
+        
+        if (localStreamRef.current) {
+          stream.getVideoTracks().forEach(track => {
+            localStreamRef.current?.addTrack(track);
+          });
+        } else {
+          localStreamRef.current = stream;
+        }
+        
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+        toast.success('Camera enabled');
+      } else {
+        // Stop video tracks
+        localStreamRef.current?.getVideoTracks().forEach(track => {
+          track.stop();
+          localStreamRef.current?.removeTrack(track);
+        });
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = null;
+        }
+        toast.info('Camera disabled');
+      }
+      setIsVideoOn(!isVideoOn);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      toast.error('Could not access camera. Please check permissions.');
+    }
+  }, [isVideoOn]);
+
+  // Toggle screen sharing
+  const handleToggleScreenShare = useCallback(async () => {
+    try {
+      if (!isScreenSharing) {
+        // Request screen share
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: { 
+            displaySurface: 'monitor',
+          },
+          audio: true
+        });
+        
+        screenStreamRef.current = stream;
+        
+        if (screenShareRef.current) {
+          screenShareRef.current.srcObject = stream;
+        }
+        
+        // Listen for when user stops sharing via browser UI
+        stream.getVideoTracks()[0].onended = () => {
+          setIsScreenSharing(false);
+          if (screenShareRef.current) {
+            screenShareRef.current.srcObject = null;
+          }
+          screenStreamRef.current = null;
+          toast.info('Screen sharing stopped');
+        };
+        
+        toast.success('Screen sharing started');
+        setIsScreenSharing(true);
+      } else {
+        // Stop screen sharing
+        screenStreamRef.current?.getTracks().forEach(track => track.stop());
+        if (screenShareRef.current) {
+          screenShareRef.current.srcObject = null;
+        }
+        screenStreamRef.current = null;
+        toast.info('Screen sharing stopped');
+        setIsScreenSharing(false);
+      }
+    } catch (error) {
+      console.error('Error sharing screen:', error);
+      if ((error as Error).name !== 'AbortError') {
+        toast.error('Could not share screen. Please try again.');
+      }
+    }
+  }, [isScreenSharing]);
 
   const handleSendMessage = () => {
     if (chatMessage.trim()) {
@@ -51,6 +187,13 @@ export default function MeetingRoom() {
   };
 
   const handleLeaveMeeting = () => {
+    // Cleanup streams before leaving
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+    }
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach(track => track.stop());
+    }
     navigate('/dashboard');
   };
 
@@ -79,28 +222,81 @@ export default function MeetingRoom() {
         </div>
 
         {/* Video Grid */}
-        <div className="flex-1 p-4 grid grid-cols-2 gap-4">
-          {participants.map((participant, index) => (
+        <div className={cn(
+          "flex-1 p-4 gap-4",
+          isScreenSharing ? "grid grid-cols-3 grid-rows-2" : "grid grid-cols-2"
+        )}>
+          {/* Screen Share - takes 2 columns when active */}
+          {isScreenSharing && (
+            <div className="col-span-2 row-span-2 relative rounded-xl overflow-hidden bg-meeting-controls ring-2 ring-primary">
+              <video
+                ref={screenShareRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-contain"
+              />
+              <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+                <div className="flex items-center gap-2">
+                  <Monitor size={14} className="text-primary" />
+                  <span className="text-meeting-foreground text-sm font-medium">
+                    You are sharing your screen
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Local User Video */}
+          <div
+            className={cn(
+              'relative rounded-xl overflow-hidden bg-meeting-controls',
+              !isScreenSharing && 'ring-2 ring-primary'
+            )}
+          >
+            {isVideoOn ? (
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <UserAvatar user={user || participants[0]} size="xl" showStatus={false} />
+              </div>
+            )}
+            
+            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+              <div className="flex items-center justify-between">
+                <span className="text-meeting-foreground text-sm font-medium">
+                  You
+                </span>
+                <div className="flex items-center gap-2">
+                  {isMuted && <MicOff size={14} className="text-red-400" />}
+                  {!isVideoOn && <VideoOff size={14} className="text-red-400" />}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Other Participants */}
+          {participants.slice(1, isScreenSharing ? 2 : 4).map((participant, index) => (
             <div
               key={participant.id}
-              className={cn(
-                'relative rounded-xl overflow-hidden bg-meeting-controls',
-                index === 0 && 'ring-2 ring-primary'
-              )}
+              className="relative rounded-xl overflow-hidden bg-meeting-controls"
             >
-              {/* Simulated video feed */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <UserAvatar user={participant} size="xl" showStatus={false} />
               </div>
               
-              {/* Participant info */}
               <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
                 <div className="flex items-center justify-between">
                   <span className="text-meeting-foreground text-sm font-medium">
                     {participant.name}
-                    {participant.id === user?.id && ' (You)'}
                   </span>
-                  {index === 1 && <MicOff size={14} className="text-red-400" />}
+                  {index === 0 && <MicOff size={14} className="text-red-400" />}
                 </div>
               </div>
             </div>
@@ -112,7 +308,7 @@ export default function MeetingRoom() {
           <Button
             variant={isMuted ? 'meeting-danger' : 'meeting'}
             size="icon-lg"
-            onClick={() => setIsMuted(!isMuted)}
+            onClick={handleToggleMute}
             className="rounded-full"
           >
             {isMuted ? <MicOff size={22} className="text-meeting-foreground" /> : <Mic size={22} className="text-meeting-foreground" />}
@@ -121,7 +317,7 @@ export default function MeetingRoom() {
           <Button
             variant={isVideoOn ? 'meeting' : 'meeting-danger'}
             size="icon-lg"
-            onClick={() => setIsVideoOn(!isVideoOn)}
+            onClick={handleToggleVideo}
             className="rounded-full"
           >
             {isVideoOn ? <Video size={22} className="text-meeting-foreground" /> : <VideoOff size={22} className="text-meeting-foreground" />}
@@ -130,10 +326,10 @@ export default function MeetingRoom() {
           <Button
             variant={isScreenSharing ? 'meeting-active' : 'meeting'}
             size="icon-lg"
-            onClick={() => setIsScreenSharing(!isScreenSharing)}
+            onClick={handleToggleScreenShare}
             className="rounded-full"
           >
-            <Monitor size={22} className="text-meeting-foreground" />
+            {isScreenSharing ? <MonitorOff size={22} className="text-meeting-foreground" /> : <Monitor size={22} className="text-meeting-foreground" />}
           </Button>
           
           <Button variant="meeting" size="icon-lg" className="rounded-full">
