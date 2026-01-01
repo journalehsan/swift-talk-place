@@ -222,13 +222,61 @@ export default function MeetingRoom() {
         </div>
 
         {/* Video Grid */}
-        <div className={cn(
-          "flex-1 p-4 gap-4",
-          isScreenSharing ? "grid grid-cols-3 grid-rows-2" : "grid grid-cols-2"
-        )}>
-          {/* Screen Share - takes 2 columns when active */}
+        <div className="flex-1 flex p-4 gap-4 min-h-0">
+          {/* Left scrollable participants when screen sharing */}
           {isScreenSharing && (
-            <div className="col-span-2 row-span-2 relative rounded-xl overflow-hidden bg-meeting-controls ring-2 ring-primary">
+            <div className="w-48 flex-shrink-0 overflow-y-auto space-y-3 pr-2">
+              {/* Local User */}
+              <div className="aspect-video relative rounded-lg overflow-hidden bg-meeting-controls ring-2 ring-primary">
+                {isVideoOn ? (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <UserAvatar user={user || participants[0]} size="lg" showStatus={false} />
+                  </div>
+                )}
+                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
+                  <div className="flex items-center justify-between">
+                    <span className="text-meeting-foreground text-xs font-medium">You</span>
+                    <div className="flex items-center gap-1">
+                      {isMuted && <MicOff size={12} className="text-red-400" />}
+                      {!isVideoOn && <VideoOff size={12} className="text-red-400" />}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Other Participants */}
+              {participants.slice(1).map((participant, index) => (
+                <div
+                  key={participant.id}
+                  className="aspect-video relative rounded-lg overflow-hidden bg-meeting-controls"
+                >
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <UserAvatar user={participant} size="lg" showStatus={false} />
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
+                    <div className="flex items-center justify-between">
+                      <span className="text-meeting-foreground text-xs font-medium truncate">
+                        {participant.name.split(' ')[0]}
+                      </span>
+                      {index === 0 && <MicOff size={12} className="text-red-400" />}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Screen Share - main area when active */}
+          {isScreenSharing ? (
+            <div className="flex-1 relative rounded-xl overflow-hidden bg-meeting-controls ring-2 ring-primary min-h-0">
               <video
                 ref={screenShareRef}
                 autoPlay
@@ -245,62 +293,56 @@ export default function MeetingRoom() {
                 </div>
               </div>
             </div>
+          ) : (
+            /* Regular grid when not screen sharing */
+            <div className="flex-1 grid grid-cols-2 gap-4">
+              {/* Local User Video */}
+              <div className="relative rounded-xl overflow-hidden bg-meeting-controls ring-2 ring-primary">
+                {isVideoOn ? (
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <UserAvatar user={user || participants[0]} size="xl" showStatus={false} />
+                  </div>
+                )}
+                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+                  <div className="flex items-center justify-between">
+                    <span className="text-meeting-foreground text-sm font-medium">You</span>
+                    <div className="flex items-center gap-2">
+                      {isMuted && <MicOff size={14} className="text-red-400" />}
+                      {!isVideoOn && <VideoOff size={14} className="text-red-400" />}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Other Participants */}
+              {participants.slice(1, 4).map((participant, index) => (
+                <div
+                  key={participant.id}
+                  className="relative rounded-xl overflow-hidden bg-meeting-controls"
+                >
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <UserAvatar user={participant} size="xl" showStatus={false} />
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+                    <div className="flex items-center justify-between">
+                      <span className="text-meeting-foreground text-sm font-medium">
+                        {participant.name}
+                      </span>
+                      {index === 0 && <MicOff size={14} className="text-red-400" />}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
-
-          {/* Local User Video */}
-          <div
-            className={cn(
-              'relative rounded-xl overflow-hidden bg-meeting-controls',
-              !isScreenSharing && 'ring-2 ring-primary'
-            )}
-          >
-            {isVideoOn ? (
-              <video
-                ref={localVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <UserAvatar user={user || participants[0]} size="xl" showStatus={false} />
-              </div>
-            )}
-            
-            <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
-              <div className="flex items-center justify-between">
-                <span className="text-meeting-foreground text-sm font-medium">
-                  You
-                </span>
-                <div className="flex items-center gap-2">
-                  {isMuted && <MicOff size={14} className="text-red-400" />}
-                  {!isVideoOn && <VideoOff size={14} className="text-red-400" />}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Other Participants */}
-          {participants.slice(1, isScreenSharing ? 2 : 4).map((participant, index) => (
-            <div
-              key={participant.id}
-              className="relative rounded-xl overflow-hidden bg-meeting-controls"
-            >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <UserAvatar user={participant} size="xl" showStatus={false} />
-              </div>
-              
-              <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
-                <div className="flex items-center justify-between">
-                  <span className="text-meeting-foreground text-sm font-medium">
-                    {participant.name}
-                  </span>
-                  {index === 0 && <MicOff size={14} className="text-red-400" />}
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* Controls Bar */}
