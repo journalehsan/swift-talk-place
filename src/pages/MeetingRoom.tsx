@@ -26,6 +26,28 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 
+// Component to display a video stream
+const LocalVideoMirror = ({ stream, className }: { stream: MediaStream; className?: string }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(console.error);
+    }
+  }, [stream]);
+  
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      className={className}
+    />
+  );
+};
+
 export default function MeetingRoom() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -44,6 +66,7 @@ export default function MeetingRoom() {
   const screenShareRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
+  const [videoKey, setVideoKey] = useState(0);
 
   const participants = mockUsers.slice(0, 4);
 
@@ -63,10 +86,8 @@ export default function MeetingRoom() {
   const handleToggleMute = useCallback(async () => {
     try {
       if (isMuted) {
-        // Request microphone permission
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         if (localStreamRef.current) {
-          // Add audio track to existing stream
           stream.getAudioTracks().forEach(track => {
             localStreamRef.current?.addTrack(track);
           });
@@ -75,7 +96,6 @@ export default function MeetingRoom() {
         }
         toast.success('Microphone enabled');
       } else {
-        // Mute audio tracks
         localStreamRef.current?.getAudioTracks().forEach(track => {
           track.stop();
           localStreamRef.current?.removeTrack(track);
@@ -93,32 +113,18 @@ export default function MeetingRoom() {
   const handleToggleVideo = useCallback(async () => {
     try {
       if (!isVideoOn) {
-        // Request camera permission
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: { width: 1280, height: 720 } 
         });
         
-        if (localStreamRef.current) {
-          stream.getVideoTracks().forEach(track => {
-            localStreamRef.current?.addTrack(track);
-          });
-        } else {
-          localStreamRef.current = stream;
-        }
-        
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
+        localStreamRef.current = stream;
+        setVideoKey(prev => prev + 1); // Force video element re-render
         toast.success('Camera enabled');
       } else {
-        // Stop video tracks
         localStreamRef.current?.getVideoTracks().forEach(track => {
           track.stop();
-          localStreamRef.current?.removeTrack(track);
         });
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = null;
-        }
+        localStreamRef.current = null;
         toast.info('Camera disabled');
       }
       setIsVideoOn(!isVideoOn);
@@ -127,6 +133,22 @@ export default function MeetingRoom() {
       toast.error('Could not access camera. Please check permissions.');
     }
   }, [isVideoOn]);
+
+  // Attach video stream when video element mounts or stream changes
+  useEffect(() => {
+    if (localVideoRef.current && localStreamRef.current && isVideoOn) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+      localVideoRef.current.play().catch(console.error);
+    }
+  }, [isVideoOn, videoKey]);
+
+  // Attach screen share stream when it becomes available
+  useEffect(() => {
+    if (screenShareRef.current && screenStreamRef.current && isScreenSharing) {
+      screenShareRef.current.srcObject = screenStreamRef.current;
+      screenShareRef.current.play().catch(console.error);
+    }
+  }, [isScreenSharing]);
 
   // Toggle screen sharing
   const handleToggleScreenShare = useCallback(async () => {
@@ -142,9 +164,13 @@ export default function MeetingRoom() {
         
         screenStreamRef.current = stream;
         
-        if (screenShareRef.current) {
-          screenShareRef.current.srcObject = stream;
-        }
+        // Set screen share source after a small delay to ensure ref is ready
+        setTimeout(() => {
+          if (screenShareRef.current) {
+            screenShareRef.current.srcObject = stream;
+            screenShareRef.current.play().catch(console.error);
+          }
+        }, 50);
         
         // Listen for when user stops sharing via browser UI
         stream.getVideoTracks()[0].onended = () => {
@@ -222,61 +248,66 @@ export default function MeetingRoom() {
         </div>
 
         {/* Video Grid */}
-        <div className="flex-1 flex p-4 gap-4 min-h-0">
+        <div className="flex-1 flex p-4 gap-4 min-h-0 overflow-hidden">
+          {/* Hidden local video element - always mounted to maintain stream */}
+          <video
+            ref={localVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className="hidden"
+          />
+          
           {/* Left scrollable participants when screen sharing */}
           {isScreenSharing && (
-            <div className="w-48 flex-shrink-0 overflow-y-auto space-y-3 pr-2">
-              {/* Local User */}
-              <div className="aspect-video relative rounded-lg overflow-hidden bg-meeting-controls ring-2 ring-primary">
-                {isVideoOn ? (
-                  <video
-                    ref={localVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <UserAvatar user={user || participants[0]} size="lg" showStatus={false} />
-                  </div>
-                )}
-                <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
-                  <div className="flex items-center justify-between">
-                    <span className="text-meeting-foreground text-xs font-medium">You</span>
-                    <div className="flex items-center gap-1">
-                      {isMuted && <MicOff size={12} className="text-red-400" />}
-                      {!isVideoOn && <VideoOff size={12} className="text-red-400" />}
+            <ScrollArea className="w-48 flex-shrink-0 h-full">
+              <div className="space-y-3 pr-2">
+                {/* Local User */}
+                <div className="aspect-video relative rounded-lg overflow-hidden bg-meeting-controls ring-2 ring-primary">
+                  {isVideoOn && localStreamRef.current ? (
+                    <LocalVideoMirror stream={localStreamRef.current} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <UserAvatar user={user || participants[0]} size="lg" showStatus={false} />
                     </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Other Participants */}
-              {participants.slice(1).map((participant, index) => (
-                <div
-                  key={participant.id}
-                  className="aspect-video relative rounded-lg overflow-hidden bg-meeting-controls"
-                >
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <UserAvatar user={participant} size="lg" showStatus={false} />
-                  </div>
+                  )}
                   <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
                     <div className="flex items-center justify-between">
-                      <span className="text-meeting-foreground text-xs font-medium truncate">
-                        {participant.name.split(' ')[0]}
-                      </span>
-                      {index === 0 && <MicOff size={12} className="text-red-400" />}
+                      <span className="text-meeting-foreground text-xs font-medium">You</span>
+                      <div className="flex items-center gap-1">
+                        {isMuted && <MicOff size={12} className="text-red-400" />}
+                        {!isVideoOn && <VideoOff size={12} className="text-red-400" />}
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+                
+                {/* Other Participants */}
+                {participants.slice(1).map((participant, index) => (
+                  <div
+                    key={participant.id}
+                    className="aspect-video relative rounded-lg overflow-hidden bg-meeting-controls"
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <UserAvatar user={participant} size="lg" showStatus={false} />
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
+                      <div className="flex items-center justify-between">
+                        <span className="text-meeting-foreground text-xs font-medium truncate">
+                          {participant.name.split(' ')[0]}
+                        </span>
+                        {index === 0 && <MicOff size={12} className="text-red-400" />}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
           )}
 
           {/* Screen Share - main area when active */}
           {isScreenSharing ? (
-            <div className="flex-1 relative rounded-xl overflow-hidden bg-meeting-controls ring-2 ring-primary min-h-0">
+            <div className="flex-1 relative rounded-xl overflow-hidden bg-black ring-2 ring-primary min-h-0">
               <video
                 ref={screenShareRef}
                 autoPlay
@@ -298,14 +329,8 @@ export default function MeetingRoom() {
             <div className="flex-1 grid grid-cols-2 gap-4">
               {/* Local User Video */}
               <div className="relative rounded-xl overflow-hidden bg-meeting-controls ring-2 ring-primary">
-                {isVideoOn ? (
-                  <video
-                    ref={localVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover"
-                  />
+                {isVideoOn && localStreamRef.current ? (
+                  <LocalVideoMirror stream={localStreamRef.current} className="w-full h-full object-cover" />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <UserAvatar user={user || participants[0]} size="xl" showStatus={false} />
