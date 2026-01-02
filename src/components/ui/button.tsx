@@ -16,9 +16,9 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         success: "bg-success text-success-foreground hover:bg-success/90 shadow-sm",
-        meeting: "bg-meeting-controls text-primary-foreground hover:bg-meeting-controls/80 border border-white/10",
-        "meeting-danger": "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        "meeting-active": "bg-primary text-primary-foreground",
+        meeting: "bg-meeting-controls text-meeting-foreground hover:bg-meeting-controls/80 border border-white/10",
+        "meeting-danger": "bg-destructive text-meeting-foreground hover:bg-destructive/90",
+        "meeting-active": "bg-primary text-meeting-foreground",
       },
       size: {
         default: "h-10 px-4 py-2",
