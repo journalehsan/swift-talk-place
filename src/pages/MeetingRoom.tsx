@@ -17,9 +17,15 @@ import {
   Hand,
   Grid3X3,
   Maximize2,
+  Minimize2,
   Settings,
   Send,
   MonitorOff,
+  LayoutGrid,
+  X,
+  Volume2,
+  Palette,
+  Layout,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -56,6 +62,10 @@ export default function MeetingRoom() {
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(true);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isStageMode, setIsStageMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [stagedUser, setStagedUser] = useState<string | null>(null);
   const [chatMessage, setChatMessage] = useState('');
   const [chatMessages, setChatMessages] = useState([
     { id: '1', sender: 'Sarah Mitchell', content: 'Hi everyone!', time: '10:30 AM' },
@@ -223,6 +233,48 @@ export default function MeetingRoom() {
     navigate('/dashboard');
   };
 
+  // Toggle stage/grid view
+  const handleToggleStageMode = () => {
+    if (!isStageMode) {
+      setStagedUser('you'); // Default to staging yourself
+    }
+    setIsStageMode(!isStageMode);
+  };
+
+  // Toggle fullscreen
+  const handleToggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (error) {
+      console.error('Error toggling fullscreen:', error);
+      toast.error('Could not toggle fullscreen');
+    }
+  };
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // Toggle settings panel
+  const handleToggleSettings = () => {
+    setIsSettingsOpen(!isSettingsOpen);
+    if (!isSettingsOpen) {
+      setIsChatOpen(false);
+      setIsParticipantsOpen(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-meeting-bg flex">
       {/* Main Video Area */}
@@ -235,13 +287,28 @@ export default function MeetingRoom() {
             <span className="text-meeting-foreground-muted text-sm">10:30 - 11:00 AM</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="meeting" size="icon-sm">
-              <Grid3X3 size={18} className="text-meeting-foreground" />
+            <Button 
+              variant={isStageMode ? 'meeting-active' : 'meeting'} 
+              size="icon-sm"
+              onClick={handleToggleStageMode}
+              title={isStageMode ? 'Switch to Grid View' : 'Switch to Stage View'}
+            >
+              {isStageMode ? <LayoutGrid size={18} className="text-meeting-foreground" /> : <Grid3X3 size={18} className="text-meeting-foreground" />}
             </Button>
-            <Button variant="meeting" size="icon-sm">
-              <Maximize2 size={18} className="text-meeting-foreground" />
+            <Button 
+              variant={isFullscreen ? 'meeting-active' : 'meeting'} 
+              size="icon-sm"
+              onClick={handleToggleFullscreen}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            >
+              {isFullscreen ? <Minimize2 size={18} className="text-meeting-foreground" /> : <Maximize2 size={18} className="text-meeting-foreground" />}
             </Button>
-            <Button variant="meeting" size="icon-sm">
+            <Button 
+              variant={isSettingsOpen ? 'meeting-active' : 'meeting'} 
+              size="icon-sm"
+              onClick={handleToggleSettings}
+              title="Meeting Settings"
+            >
               <Settings size={18} className="text-meeting-foreground" />
             </Button>
           </div>
@@ -322,6 +389,103 @@ export default function MeetingRoom() {
                     You are sharing your screen
                   </span>
                 </div>
+              </div>
+            </div>
+          ) : isStageMode ? (
+            /* Stage mode - one user featured, others in sidebar */
+            <div className="flex-1 flex gap-4 min-h-0">
+              {/* Left scrollable participants */}
+              <ScrollArea className="w-48 flex-shrink-0 h-full">
+                <div className="space-y-3 pr-2">
+                  {/* Local User - clickable to stage */}
+                  <div 
+                    className={cn(
+                      "aspect-video relative rounded-lg overflow-hidden bg-meeting-controls cursor-pointer transition-all hover:ring-2 hover:ring-primary/50",
+                      stagedUser === 'you' && "ring-2 ring-primary"
+                    )}
+                    onClick={() => setStagedUser('you')}
+                  >
+                    {isVideoOn && localStreamRef.current ? (
+                      <LocalVideoMirror stream={localStreamRef.current} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <UserAvatar user={user || participants[0]} size="lg" showStatus={false} />
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
+                      <div className="flex items-center justify-between">
+                        <span className="text-meeting-foreground text-xs font-medium">You</span>
+                        <div className="flex items-center gap-1">
+                          {isMuted && <MicOff size={12} className="text-red-400" />}
+                          {!isVideoOn && <VideoOff size={12} className="text-red-400" />}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Other Participants - clickable to stage */}
+                  {participants.slice(1).map((participant, index) => (
+                    <div
+                      key={participant.id}
+                      className={cn(
+                        "aspect-video relative rounded-lg overflow-hidden bg-meeting-controls cursor-pointer transition-all hover:ring-2 hover:ring-primary/50",
+                        stagedUser === participant.id && "ring-2 ring-primary"
+                      )}
+                      onClick={() => setStagedUser(participant.id)}
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <UserAvatar user={participant} size="lg" showStatus={false} />
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
+                        <div className="flex items-center justify-between">
+                          <span className="text-meeting-foreground text-xs font-medium truncate">
+                            {participant.name.split(' ')[0]}
+                          </span>
+                          {index === 0 && <MicOff size={12} className="text-red-400" />}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              {/* Main staged user */}
+              <div className="flex-1 relative rounded-xl overflow-hidden bg-meeting-controls ring-2 ring-primary min-h-0">
+                {stagedUser === 'you' ? (
+                  <>
+                    {isVideoOn && localStreamRef.current ? (
+                      <LocalVideoMirror stream={localStreamRef.current} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <UserAvatar user={user || participants[0]} size="xl" showStatus={false} />
+                      </div>
+                    )}
+                    <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+                      <div className="flex items-center justify-between">
+                        <span className="text-meeting-foreground text-sm font-medium">You</span>
+                        <div className="flex items-center gap-2">
+                          {isMuted && <MicOff size={14} className="text-red-400" />}
+                          {!isVideoOn && <VideoOff size={14} className="text-red-400" />}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <UserAvatar 
+                        user={participants.find(p => p.id === stagedUser) || participants[1]} 
+                        size="xl" 
+                        showStatus={false} 
+                      />
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+                      <span className="text-meeting-foreground text-sm font-medium">
+                        {participants.find(p => p.id === stagedUser)?.name || participants[1].name}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           ) : (
@@ -441,13 +605,25 @@ export default function MeetingRoom() {
         </div>
       </div>
 
-      {/* Side Panel - Chat or Participants */}
-      {(isChatOpen || isParticipantsOpen) && (
+      {/* Side Panel - Chat, Participants, or Settings */}
+      {(isChatOpen || isParticipantsOpen || isSettingsOpen) && (
         <div className="w-80 meeting-glass border-l border-border/20 flex flex-col animate-slide-up">
-          <div className="h-14 px-4 flex items-center border-b border-border/20">
+          <div className="h-14 px-4 flex items-center justify-between border-b border-border/20">
             <h3 className="text-meeting-foreground font-medium">
-              {isChatOpen ? 'In-call messages' : 'Participants'}
+              {isChatOpen ? 'In-call messages' : isParticipantsOpen ? 'Participants' : 'Settings'}
             </h3>
+            <Button 
+              variant="ghost" 
+              size="icon-sm" 
+              onClick={() => {
+                setIsChatOpen(false);
+                setIsParticipantsOpen(false);
+                setIsSettingsOpen(false);
+              }}
+              className="text-meeting-foreground-muted hover:text-meeting-foreground"
+            >
+              <X size={16} />
+            </Button>
           </div>
 
           {isChatOpen ? (
@@ -480,7 +656,7 @@ export default function MeetingRoom() {
                 </div>
               </div>
             </>
-          ) : (
+          ) : isParticipantsOpen ? (
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-3">
                 {participants.map((participant) => (
@@ -495,6 +671,124 @@ export default function MeetingRoom() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </ScrollArea>
+          ) : (
+            /* Settings Panel */
+            <ScrollArea className="flex-1 p-4">
+              <div className="space-y-6">
+                {/* Layout Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-meeting-foreground-muted">
+                    <Layout size={16} />
+                    <span className="text-xs uppercase font-medium tracking-wider">Layout</span>
+                  </div>
+                  <div className="space-y-2">
+                    <Button
+                      variant={!isStageMode ? 'meeting-active' : 'meeting'}
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      onClick={() => setIsStageMode(false)}
+                    >
+                      <LayoutGrid size={16} />
+                      Grid View
+                    </Button>
+                    <Button
+                      variant={isStageMode ? 'meeting-active' : 'meeting'}
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      onClick={() => { setIsStageMode(true); setStagedUser('you'); }}
+                    >
+                      <Grid3X3 size={16} />
+                      Stage View
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Audio Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-meeting-foreground-muted">
+                    <Volume2 size={16} />
+                    <span className="text-xs uppercase font-medium tracking-wider">Audio</span>
+                  </div>
+                  <div className="space-y-2">
+                    <Button
+                      variant={!isMuted ? 'meeting-active' : 'meeting'}
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      onClick={handleToggleMute}
+                    >
+                      {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
+                      {isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Video Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-meeting-foreground-muted">
+                    <Video size={16} />
+                    <span className="text-xs uppercase font-medium tracking-wider">Video</span>
+                  </div>
+                  <div className="space-y-2">
+                    <Button
+                      variant={isVideoOn ? 'meeting-active' : 'meeting'}
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      onClick={handleToggleVideo}
+                    >
+                      {isVideoOn ? <Video size={16} /> : <VideoOff size={16} />}
+                      {isVideoOn ? 'Turn Off Camera' : 'Turn On Camera'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Display Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-meeting-foreground-muted">
+                    <Palette size={16} />
+                    <span className="text-xs uppercase font-medium tracking-wider">Display</span>
+                  </div>
+                  <div className="space-y-2">
+                    <Button
+                      variant={isFullscreen ? 'meeting-active' : 'meeting'}
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      onClick={handleToggleFullscreen}
+                    >
+                      {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                      {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Quick Access */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-meeting-foreground-muted">
+                    <Users size={16} />
+                    <span className="text-xs uppercase font-medium tracking-wider">Quick Access</span>
+                  </div>
+                  <div className="space-y-2">
+                    <Button
+                      variant="meeting"
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      onClick={() => { setIsSettingsOpen(false); setIsChatOpen(true); }}
+                    >
+                      <MessageSquare size={16} />
+                      Open Chat
+                    </Button>
+                    <Button
+                      variant="meeting"
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                      onClick={() => { setIsSettingsOpen(false); setIsParticipantsOpen(true); }}
+                    >
+                      <Users size={16} />
+                      View Participants
+                    </Button>
+                  </div>
+                </div>
               </div>
             </ScrollArea>
           )}
