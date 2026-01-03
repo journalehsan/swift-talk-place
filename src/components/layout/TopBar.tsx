@@ -6,8 +6,19 @@ import { NewMeetingModal } from '@/components/modals/NewMeetingModal';
 import { Sun, Moon, Plus } from 'lucide-react';
 
 export function TopBar() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, themeMode, setThemeMode } = useTheme();
   const [meetingModalOpen, setMeetingModalOpen] = useState(false);
+
+  const handleToggleTheme = () => {
+    // Cycle through: light -> dark -> system -> light
+    if (themeMode === 'light') {
+      setThemeMode('dark');
+    } else if (themeMode === 'dark') {
+      setThemeMode('system');
+    } else {
+      setThemeMode('light');
+    }
+  };
 
   return (
     <>
@@ -29,8 +40,9 @@ export function TopBar() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={toggleTheme}
+            onClick={handleToggleTheme}
             className="rounded-full text-primary-foreground hover:bg-primary-foreground/10"
+            title={`Theme: ${themeMode}`}
           >
             {theme === 'light' ? (
               <Moon className="h-5 w-5" />
