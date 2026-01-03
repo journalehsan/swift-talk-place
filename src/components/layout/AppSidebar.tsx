@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -14,6 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/UserAvatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSidebarContext } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -26,7 +26,7 @@ const navItems = [
 ];
 
 export function AppSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, toggle } = useSidebarContext();
   const { user, logout } = useAuth();
   const location = useLocation();
 
@@ -51,7 +51,7 @@ export function AppSidebar() {
             variant="ghost"
             size="icon-sm"
             className="text-sidebar-foreground hover:bg-sidebar-accent"
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={toggle}
           >
             {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
           </Button>
