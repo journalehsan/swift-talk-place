@@ -141,9 +141,6 @@ export default function Settings() {
         video: { deviceId: selectedCamera ? { exact: selectedCamera } : undefined }
       });
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
       setVideoStream(stream);
       setIsPreviewActive(true);
     } catch (error) {
@@ -155,6 +152,13 @@ export default function Settings() {
       });
     }
   };
+
+  // Assign stream to video element when both are ready
+  useEffect(() => {
+    if (videoRef.current && videoStream) {
+      videoRef.current.srcObject = videoStream;
+    }
+  }, [videoStream, isPreviewActive]);
 
   // Stop webcam preview
   const stopCameraPreview = () => {
