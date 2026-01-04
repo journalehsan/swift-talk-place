@@ -910,33 +910,38 @@ export default function MeetingRoom() {
 
       {/* Save Recording Dialog */}
       <AlertDialog open={showSaveRecordingDialog} onOpenChange={setShowSaveRecordingDialog}>
-        <AlertDialogContent className="max-w-md">
+        <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Circle size={16} className="text-red-500 fill-red-500" />
               Save Recording?
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>You have an active recording ({formatDuration(recordingDuration)}).</p>
-              <p>Would you like to save it before continuing?</p>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>You have an active recording ({formatDuration(recordingDuration)}).</p>
+                <p>Would you like to save it before continuing?</p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel onClick={handleStopRecordingWithoutSave}>
-              Discard Recording
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => handleSaveRecording(false)}
-              className="bg-primary text-primary-foreground"
-            >
-              Save & Continue
-            </AlertDialogAction>
+          <AlertDialogFooter className="flex flex-col gap-2 sm:flex-col">
             <AlertDialogAction 
               onClick={() => handleSaveRecording(true)}
-              className="bg-green-600 text-white hover:bg-green-700"
+              className="w-full bg-green-600 text-white hover:bg-green-700"
             >
               Save & View Recordings
             </AlertDialogAction>
+            <AlertDialogAction 
+              onClick={() => handleSaveRecording(false)}
+              className="w-full bg-primary text-primary-foreground"
+            >
+              Save & Continue
+            </AlertDialogAction>
+            <AlertDialogCancel 
+              onClick={handleStopRecordingWithoutSave}
+              className="w-full"
+            >
+              Discard Recording
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
