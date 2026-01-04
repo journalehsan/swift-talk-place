@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Meetings from "./pages/Meetings";
 import MeetingRoom from "./pages/MeetingRoom";
+import Recordings from "./pages/Recordings";
 import Chat from "./pages/Chat";
 import CalendarPage from "./pages/CalendarPage";
 import Contacts from "./pages/Contacts";
@@ -32,6 +33,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/meetings" element={<Meetings />} />
               <Route path="/meeting-room" element={<MeetingRoom />} />
+              <Route path="/recordings" element={<Recordings />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/chat/:id" element={<Chat />} />
               <Route path="/calendar" element={<CalendarPage />} />

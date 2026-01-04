@@ -26,11 +26,23 @@ import {
   Volume2,
   Palette,
   Layout,
+  Circle,
+  Square,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 // Component to display a video stream
 const LocalVideoMirror = ({ stream, className }: { stream: MediaStream; className?: string }) => {
@@ -72,6 +84,12 @@ export default function MeetingRoom() {
     { id: '2', sender: 'Michael Chen', content: 'Ready to start?', time: '10:31 AM' },
   ]);
 
+  // Recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [showSaveRecordingDialog, setShowSaveRecordingDialog] = useState(false);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const screenShareRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -88,6 +106,9 @@ export default function MeetingRoom() {
       }
       if (screenStreamRef.current) {
         screenStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
       }
     };
   }, []);
@@ -223,6 +244,12 @@ export default function MeetingRoom() {
   };
 
   const handleLeaveMeeting = () => {
+    // If recording, show save dialog
+    if (isRecording) {
+      setShowSaveRecordingDialog(true);
+      return;
+    }
+    
     // Cleanup streams before leaving
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
@@ -231,6 +258,64 @@ export default function MeetingRoom() {
       screenStreamRef.current.getTracks().forEach(track => track.stop());
     }
     navigate('/dashboard');
+  };
+
+  // Handle recording toggle
+  const handleToggleRecording = () => {
+    if (!isRecording) {
+      setIsRecording(true);
+      setRecordingDuration(0);
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+      toast.success('Recording started');
+    } else {
+      setShowSaveRecordingDialog(true);
+    }
+  };
+
+  // Stop recording without saving
+  const handleStopRecordingWithoutSave = () => {
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+    }
+    setIsRecording(false);
+    setRecordingDuration(0);
+    setShowSaveRecordingDialog(false);
+    toast.info('Recording discarded');
+  };
+
+  // Save recording and leave/continue
+  const handleSaveRecording = (andLeave: boolean = false) => {
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+    }
+    setIsRecording(false);
+    setRecordingDuration(0);
+    setShowSaveRecordingDialog(false);
+    toast.success('Recording saved successfully!');
+    
+    if (andLeave) {
+      // Cleanup streams before leaving
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      navigate('/recordings');
+    }
+  };
+
+  // Format recording duration
+  const formatDuration = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   // Toggle stage/grid view
@@ -285,6 +370,16 @@ export default function MeetingRoom() {
             <span className="text-meeting-foreground font-medium">Daily Standup</span>
             <span className="text-meeting-foreground-muted text-sm">|</span>
             <span className="text-meeting-foreground-muted text-sm">10:30 - 11:00 AM</span>
+            
+            {/* Recording Indicator */}
+            {isRecording && (
+              <div className="flex items-center gap-2 ml-4 px-3 py-1.5 bg-red-500/20 rounded-full border border-red-500/30">
+                <Circle size={10} className="text-red-500 fill-red-500 animate-pulse" />
+                <span className="text-red-400 text-sm font-medium">
+                  REC {formatDuration(recordingDuration)}
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button 
@@ -567,6 +662,24 @@ export default function MeetingRoom() {
             <Hand size={22} className="text-meeting-foreground" />
           </Button>
           
+          {/* Record Button */}
+          <Button
+            variant={isRecording ? 'meeting-danger' : 'meeting'}
+            size="icon-lg"
+            onClick={handleToggleRecording}
+            className="rounded-full relative"
+            title={isRecording ? 'Stop Recording' : 'Start Recording'}
+          >
+            {isRecording ? (
+              <Square size={18} className="text-meeting-foreground fill-meeting-foreground" />
+            ) : (
+              <Circle size={22} className="text-red-400" />
+            )}
+            {isRecording && (
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+            )}
+          </Button>
+          
           <div className="w-px h-8 bg-border/30 mx-2" />
           
           <Button
@@ -794,6 +907,39 @@ export default function MeetingRoom() {
           )}
         </div>
       )}
+
+      {/* Save Recording Dialog */}
+      <AlertDialog open={showSaveRecordingDialog} onOpenChange={setShowSaveRecordingDialog}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Circle size={16} className="text-red-500 fill-red-500" />
+              Save Recording?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>You have an active recording ({formatDuration(recordingDuration)}).</p>
+              <p>Would you like to save it before continuing?</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={handleStopRecordingWithoutSave}>
+              Discard Recording
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => handleSaveRecording(false)}
+              className="bg-primary text-primary-foreground"
+            >
+              Save & Continue
+            </AlertDialogAction>
+            <AlertDialogAction 
+              onClick={() => handleSaveRecording(true)}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              Save & View Recordings
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
