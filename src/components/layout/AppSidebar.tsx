@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Users,
+  Film,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
   { icon: Video, label: 'Meetings', path: '/meetings' },
+  { icon: Film, label: 'Recordings', path: '/recordings' },
   { icon: MessageSquare, label: 'Chat', path: '/chat' },
   { icon: Calendar, label: 'Calendar', path: '/calendar' },
   { icon: Users, label: 'Contacts', path: '/contacts' },
