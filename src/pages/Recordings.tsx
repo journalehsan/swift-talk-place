@@ -16,12 +16,19 @@ import {
   Users,
   MoreVertical,
   Filter,
+  X,
+  ArrowUpDown,
+  CalendarDays,
+  Timer,
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -33,6 +40,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 
 // Mock recordings data
@@ -46,6 +61,7 @@ const mockRecordings = [
     participants: ['Sarah Mitchell', 'Michael Chen', 'Emily Rodriguez', 'David Kim'],
     size: '156 MB',
     thumbnail: null,
+    category: 'standup',
   },
   {
     id: '2',
@@ -56,6 +72,7 @@ const mockRecordings = [
     participants: ['John Smith', 'Sarah Mitchell', 'External Client'],
     size: '420 MB',
     thumbnail: null,
+    category: 'presentation',
   },
   {
     id: '3',
@@ -66,6 +83,7 @@ const mockRecordings = [
     participants: ['CEO', 'All Team Members'],
     size: '245 MB',
     thumbnail: null,
+    category: 'all-hands',
   },
   {
     id: '4',
@@ -76,6 +94,7 @@ const mockRecordings = [
     participants: ['Emily Rodriguez', 'David Kim', 'UX Team'],
     size: '312 MB',
     thumbnail: null,
+    category: 'review',
   },
   {
     id: '5',
@@ -86,7 +105,20 @@ const mockRecordings = [
     participants: ['Development Team', 'Product Owner'],
     size: '520 MB',
     thumbnail: null,
+    category: 'planning',
   },
+];
+
+type SortOption = 'date-desc' | 'date-asc' | 'duration-desc' | 'duration-asc' | 'size-desc' | 'size-asc';
+type DurationFilter = 'all' | 'short' | 'medium' | 'long';
+type DateFilter = 'all' | 'today' | 'week' | 'month';
+
+const categories = [
+  { id: 'standup', label: 'Daily Standup' },
+  { id: 'presentation', label: 'Presentation' },
+  { id: 'all-hands', label: 'All-Hands' },
+  { id: 'review', label: 'Review Session' },
+  { id: 'planning', label: 'Planning' },
 ];
 
 export default function Recordings() {
@@ -94,11 +126,99 @@ export default function Recordings() {
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedRecording, setSelectedRecording] = useState<string | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  
+  // Filter states
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [durationFilter, setDurationFilter] = useState<DurationFilter>('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+  const [sortOption, setSortOption] = useState<SortOption>('date-desc');
 
-  const filteredRecordings = recordings.filter(rec =>
-    rec.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    rec.participants.some(p => p.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Parse duration to minutes
+  const parseDuration = (duration: string): number => {
+    const parts = duration.split(':');
+    if (parts.length === 3) {
+      return parseInt(parts[0]) * 60 + parseInt(parts[1]) + parseInt(parts[2]) / 60;
+    }
+    return parseInt(parts[0]) + parseInt(parts[1]) / 60;
+  };
+
+  // Parse size to MB
+  const parseSize = (size: string): number => {
+    return parseInt(size.replace(' MB', ''));
+  };
+
+  // Apply filters
+  const filteredRecordings = recordings
+    .filter(rec => {
+      // Search filter
+      const matchesSearch = 
+        rec.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rec.participants.some(p => p.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      // Category filter
+      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(rec.category);
+      
+      // Duration filter
+      const duration = parseDuration(rec.duration);
+      let matchesDuration = true;
+      if (durationFilter === 'short') matchesDuration = duration < 30;
+      else if (durationFilter === 'medium') matchesDuration = duration >= 30 && duration < 60;
+      else if (durationFilter === 'long') matchesDuration = duration >= 60;
+      
+      // Date filter
+      const recordingDate = new Date(rec.date);
+      const now = new Date();
+      let matchesDate = true;
+      if (dateFilter === 'today') {
+        matchesDate = recordingDate.toDateString() === now.toDateString();
+      } else if (dateFilter === 'week') {
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        matchesDate = recordingDate >= weekAgo;
+      } else if (dateFilter === 'month') {
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        matchesDate = recordingDate >= monthAgo;
+      }
+      
+      return matchesSearch && matchesCategory && matchesDuration && matchesDate;
+    })
+    .sort((a, b) => {
+      switch (sortOption) {
+        case 'date-asc':
+          return new Date(a.date).getTime() - new Date(b.date).getTime();
+        case 'date-desc':
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        case 'duration-asc':
+          return parseDuration(a.duration) - parseDuration(b.duration);
+        case 'duration-desc':
+          return parseDuration(b.duration) - parseDuration(a.duration);
+        case 'size-asc':
+          return parseSize(a.size) - parseSize(b.size);
+        case 'size-desc':
+          return parseSize(b.size) - parseSize(a.size);
+        default:
+          return 0;
+      }
+    });
+
+  const activeFiltersCount = 
+    (selectedCategories.length > 0 ? 1 : 0) + 
+    (durationFilter !== 'all' ? 1 : 0) + 
+    (dateFilter !== 'all' ? 1 : 0);
+
+  const clearFilters = () => {
+    setSelectedCategories([]);
+    setDurationFilter('all');
+    setDateFilter('all');
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(categoryId) 
+        ? prev.filter(c => c !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
 
   const handleDelete = (id: string) => {
     setSelectedRecording(id);
@@ -153,11 +273,223 @@ export default function Recordings() {
                 className="pl-10"
               />
             </div>
-            <Button variant="outline" size="sm">
-              <Filter size={16} className="mr-2" />
-              Filter
-            </Button>
+            
+            {/* Filter Popover */}
+            <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="relative">
+                  <Filter size={16} className="mr-2" />
+                  Filter
+                  {activeFiltersCount > 0 && (
+                    <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                      {activeFiltersCount}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="end">
+                <div className="p-4 border-b border-border">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-sm">Filters</h4>
+                    {activeFiltersCount > 0 && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={clearFilters}
+                        className="h-auto py-1 px-2 text-xs text-muted-foreground"
+                      >
+                        Clear all
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="p-4 space-y-4">
+                  {/* Categories */}
+                  <div className="space-y-3">
+                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Category
+                    </Label>
+                    <div className="space-y-2">
+                      {categories.map(category => (
+                        <div key={category.id} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={category.id}
+                            checked={selectedCategories.includes(category.id)}
+                            onCheckedChange={() => toggleCategory(category.id)}
+                          />
+                          <Label 
+                            htmlFor={category.id} 
+                            className="text-sm font-normal cursor-pointer"
+                          >
+                            {category.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Duration */}
+                  <div className="space-y-3">
+                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                      <Timer size={14} />
+                      Duration
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { value: 'all', label: 'All' },
+                        { value: 'short', label: '< 30 min' },
+                        { value: 'medium', label: '30-60 min' },
+                        { value: 'long', label: '> 60 min' },
+                      ].map(option => (
+                        <Button
+                          key={option.value}
+                          variant={durationFilter === option.value ? 'default' : 'outline'}
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={() => setDurationFilter(option.value as DurationFilter)}
+                        >
+                          {option.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Date Range */}
+                  <div className="space-y-3">
+                    <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                      <CalendarDays size={14} />
+                      Date Range
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { value: 'all', label: 'All Time' },
+                        { value: 'today', label: 'Today' },
+                        { value: 'week', label: 'This Week' },
+                        { value: 'month', label: 'This Month' },
+                      ].map(option => (
+                        <Button
+                          key={option.value}
+                          variant={dateFilter === option.value ? 'default' : 'outline'}
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={() => setDateFilter(option.value as DateFilter)}
+                        >
+                          {option.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 border-t border-border bg-muted/50">
+                  <Button 
+                    className="w-full" 
+                    size="sm"
+                    onClick={() => setFilterOpen(false)}
+                  >
+                    Apply Filters
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Sort Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <ArrowUpDown size={16} className="mr-2" />
+                  Sort
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem 
+                  checked={sortOption === 'date-desc'}
+                  onCheckedChange={() => setSortOption('date-desc')}
+                >
+                  Date (Newest first)
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem 
+                  checked={sortOption === 'date-asc'}
+                  onCheckedChange={() => setSortOption('date-asc')}
+                >
+                  Date (Oldest first)
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem 
+                  checked={sortOption === 'duration-desc'}
+                  onCheckedChange={() => setSortOption('duration-desc')}
+                >
+                  Duration (Longest first)
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem 
+                  checked={sortOption === 'duration-asc'}
+                  onCheckedChange={() => setSortOption('duration-asc')}
+                >
+                  Duration (Shortest first)
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem 
+                  checked={sortOption === 'size-desc'}
+                  onCheckedChange={() => setSortOption('size-desc')}
+                >
+                  Size (Largest first)
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem 
+                  checked={sortOption === 'size-asc'}
+                  onCheckedChange={() => setSortOption('size-asc')}
+                >
+                  Size (Smallest first)
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+
+          {/* Active Filters Tags */}
+          {activeFiltersCount > 0 && (
+            <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <span className="text-xs text-muted-foreground">Active filters:</span>
+              {selectedCategories.map(catId => {
+                const cat = categories.find(c => c.id === catId);
+                return (
+                  <Badge key={catId} variant="secondary" className="text-xs gap-1">
+                    {cat?.label}
+                    <X 
+                      size={12} 
+                      className="cursor-pointer hover:text-destructive" 
+                      onClick={() => toggleCategory(catId)}
+                    />
+                  </Badge>
+                );
+              })}
+              {durationFilter !== 'all' && (
+                <Badge variant="secondary" className="text-xs gap-1">
+                  Duration: {durationFilter === 'short' ? '< 30 min' : durationFilter === 'medium' ? '30-60 min' : '> 60 min'}
+                  <X 
+                    size={12} 
+                    className="cursor-pointer hover:text-destructive" 
+                    onClick={() => setDurationFilter('all')}
+                  />
+                </Badge>
+              )}
+              {dateFilter !== 'all' && (
+                <Badge variant="secondary" className="text-xs gap-1">
+                  Date: {dateFilter === 'today' ? 'Today' : dateFilter === 'week' ? 'This Week' : 'This Month'}
+                  <X 
+                    size={12} 
+                    className="cursor-pointer hover:text-destructive" 
+                    onClick={() => setDateFilter('all')}
+                  />
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Recordings List */}
